@@ -6,7 +6,7 @@ import numpy as np
 import seaborn as sns
 
 class Grid:
-    def __init__(self, x = 40, y = 60, attributes = 4):
+    def __init__(self, x = 60, y = 100, attributes = 4):
         self.x = x
         self.y = y
         self.nodes = np.array([[Node(i, j, attributes) for j in range(y)] for i in range(x)])
