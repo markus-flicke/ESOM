@@ -1,3 +1,9 @@
+# -*- coding: utf-8 -*-
+"""
+ESOM implementation after hearing Knowledge Discovery at Marburg University, Germany.
+Currently the __init__ consumes all data and plots an ESOM using Euklidian distance
+"""
+
 from Node import Node
 import pandas as pd
 from PIL import Image
@@ -7,24 +13,38 @@ import seaborn as sns
 
 class ESOM:
     """
-    ESOM implementation after hearing Knowledge Discovery at Marburg University
-    Currently the __init__ consumes all data and plots an ESOM using Euklidian distance
+    Class for training an Emergent Self Organising Map and displaying the resulting U-Matrix.
+
+    Attributes:
+
+        trainingDF     The training dataset as a Pandas DataFrame.
+
+    :param categoriesVector: Class categorisation solely used for coloring the BMUs past processing.
+    :type categoriesVector: list or npArray.
+
+    :param x: The x dimension length of the Neural Layer.
+    :type x: int.
+
+    :param y: The y dimension length of the Neural Layer.
+    :type y: int.
+
+    :param generations: The number of repeats of the training session.
+    :type generations: int.
+
+    :param frameSize: The sidelength in pixels of each Node displayed in the grid.
+    :type frameSize: int.
     """
 
-    def __init__(self, trainingDF, categoriesVector, x=5, y=10, generations = 1, frameSize = 10):
-        self.categoriesVector = categoriesVector
+    def __init__(self, trainingDF, categoriesVector=None, x=20, y=30, generations=2, frameSize=10):
         self.dataTraining = trainingDF
+        self.categoriesVector = categoriesVector if not categoriesVector is None else np.zeros(trainingDF.shape[0])
         self.x = x
         self.y = y
         self.nodes = np.array([[Node(i, j, trainingDF.shape[1]) for j in range(y)] for i in range(x)])
         self.timeWeight = 1
         self.maxDistance = self.__dist(Node(0, 0, 0), Node(self.x / 2, self.y / 2, 0))
         self.generations = generations
-
-        # May be called outside __init__ in the future
-        self.consume()
-        self.plot(frameSize = frameSize)
-        #
+        self.frameSize = frameSize
 
     def __dist(self, nodeA, nodeB):
         def toroidalDistanceAlongAxis(a, b, axisLength):
@@ -36,11 +56,12 @@ class ESOM:
         dy = toroidalDistanceAlongAxis(nodeA.y, nodeB.y, self.y)
         return (dx ** 2 + dy ** 2) ** 0.5
 
-    def consume(self):
+    def _consume(self):
         for j in range(self.generations):
             for i in self.dataTraining.index:
                 self.__consumeVector(self.dataTraining.iloc[i].values)
-            print("Finished generation {} of {} ({:0.0f}%)".format(j + 1, self.generations, 100*(j + 1)/self.generations))
+            print("Finished generation {} of {} ({:0.0f}%)".format(j + 1, self.generations,
+                                                                   100 * (j + 1) / self.generations))
 
     def __consumeVector(self, vector):
         radiusOfInfluence = 1
@@ -69,7 +90,10 @@ class ESOM:
         assert bmu is not None, "no best matching unit found"
         return bmu
 
-    def plot(self, ncolors=20, frameSize=10):
+    def plot(self, ncolors=20, frameSize=None):
+        if frameSize is None:
+            frameSize = self.frameSize
+        self._consume()
         xDim = self.x * frameSize
         yDim = self.y * frameSize
         palette = sns.color_palette("RdBu", n_colors=ncolors)
@@ -81,12 +105,6 @@ class ESOM:
             for i in range(length):
                 for j in range(length):
                     pixels[int(x * length + i), int(y * length + j)] = color
-
-        # Normalise Similarity values
-
-        # similarities = pd.Series([node.similarity([1,1,1,1]) for node in self.nodes.flatten()])
-        # min = similarities.min()
-        # max = similarities.max()
 
         def nearestNeighbourDistance(node):
             def getXTorusCoordinate(x):
@@ -131,13 +149,19 @@ class ESOM:
                 pixels[x * frameSize + i, y * frameSize + frameSize - 1 - i] = color
 
         def drawBMUs():
+            def makeColorDict():
+                # ColorDict associates solution classes with n = categoriesVector.length colors
+                uniqueCategories = np.unique(self.categoriesVector)
+                n = uniqueCategories.shape[0]
+                snsColors = sns.color_palette("hls", n)
+                rgbColors = [tuple(int(a * 255) for a in x) for x in snsColors]
+                return dict(zip(uniqueCategories, rgbColors))
+
+            classColorDict = makeColorDict()
+
             for i in self.dataTraining.index:
                 species = self.categoriesVector[i]
-                color = (255, 0, 0) if species == 'setosa' \
-                    else (0, 255, 0) if species == 'virginica' \
-                    else (0, 0, 255) if species == "versicolor" \
-                    else None
-
+                color = classColorDict.get(species)
                 node = self.__getBMU(self.dataTraining.iloc[i].values)
                 drawBMU(pixels, node.x, node.y, color)
 
@@ -167,5 +191,6 @@ if __name__ == "__main__":
             df[col] /= df[col].max()
         return df
 
+
     normalised = normalise(dataTrain)
-    ESOM(normalised, dataAll['species'])
+    ESOM(normalised, dataAll['species'], x = 30, y = 50).plot()

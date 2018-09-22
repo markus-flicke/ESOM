@@ -1,9 +1,22 @@
 import numpy as np
 from ESOM import ESOM
+import pandas as pd
+
+dataAll = pd.read_csv('iris.csv')
+dataTrain = dataAll.filter(["sepal_length", "sepal_width", "petal_length", "petal_width"])
+
+
+def normalise(df):
+    for col in df.columns:
+        df[col] -= df[col].min()
+        df[col] /= df[col].max()
+    return df
+
+normalised = normalise(dataTrain)
 
 # TESTING
 def torodialDistTest():
-    grid = ESOM()
+    grid = ESOM(normalised, dataAll['species'])
     print("-----------------------  TEST  -----------------------")
     print("\nAround Torus Examples:\n")
     print("Torus dimensions x={}, y={}".format(grid.x, grid.y))
@@ -32,7 +45,7 @@ def torodialDistTest():
 
 
 def bmuTest():
-    g = ESOM()
+    g = ESOM(normalised, dataAll['species'])
     print("-----------------------  TEST  -----------------------")
     print("BMU to [1,1,1,1] should be full of high values:")
     print(g.__getBMU(np.array([1, 1, 1, 1])))
@@ -41,12 +54,12 @@ def bmuTest():
 
 def consumeDataPointTest():
     print("-----------------------  TEST  -----------------------")
-    g = ESOM()
+    g = ESOM(normalised, dataAll['species'])
     datapoint = np.array([1, 1, 1, 1])
     print("Best Matching unit to datapoint {}:".format(datapoint))
     print(g.__getBMU(datapoint))
     print("Consume {}".format(datapoint))
-    g.consume(datapoint)
+    g._consume(datapoint)
     print("Should be same coordinates, but BMU == {}".format(datapoint))
     bmu = g.__getBMU(datapoint)
     assert all(bmu.vector.__eq__(datapoint)), "Test failed, BMU != datapoint after first insertion"
@@ -57,7 +70,7 @@ def consumeDataPointTest():
     print("Best Matching unit to datapoint {}:".format(datapoint))
     print(g.__getBMU(datapoint))
     print("Consume {}".format(datapoint))
-    g.consume(datapoint)
+    g._consume(datapoint)
     print("Should be same coordinates, and BMU approaching but not equal to {}".format(datapoint))
     print(g.__getBMU(datapoint))
     print("------------------------------------------------------")
