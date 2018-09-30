@@ -4,7 +4,7 @@ ESOM implementation after hearing Knowledge Discovery at Marburg University, Ger
 Currently the __init__ consumes all data and plots an ESOM using Euklidian distance
 """
 
-from Node import Node
+import Node
 import pandas as pd
 from PIL import Image
 import numpy as np
@@ -36,7 +36,7 @@ class ESOM:
     """
 
     def __init__(self, trainingDF, categoriesVector=None, x=20, y=30, generations=2, frameSize=10):
-        self.dataTraining = trainingDF
+        self.dataTraining = trainingDF.reset_index(drop = True)
         self.categoriesVector = categoriesVector if not categoriesVector is None else np.zeros(trainingDF.shape[0])
         self.x = x
         self.y = y
@@ -155,6 +155,7 @@ class ESOM:
                 n = uniqueCategories.shape[0]
                 snsColors = sns.color_palette("hls", n)
                 rgbColors = [tuple(int(a * 255) for a in x) for x in snsColors]
+                print("color key:\n{}\n{}".format(uniqueCategories, rgbColors))
                 return dict(zip(uniqueCategories, rgbColors))
 
             classColorDict = makeColorDict()
@@ -193,4 +194,4 @@ if __name__ == "__main__":
 
 
     normalised = normalise(dataTrain)
-    ESOM(normalised, dataAll['species'], x = 30, y = 50).plot()
+    ESOM(normalised, x = 30, y = 50).plot()
